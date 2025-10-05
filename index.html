@@ -1,309 +1,571 @@
-import React, { useState, useEffect } from 'react';
-import { RotateCcw, Info } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0f172a">
+    <title>The Game</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-const TheGame = () => {
-  const [deck, setDeck] = useState([]);
-  const [hand, setHand] = useState([]);
-  const [piles, setPiles] = useState({
-    asc1: [1],
-    asc2: [1],
-    desc1: [100],
-    desc2: [100]
-  });
-  const [selectedCard, setSelectedCard] = useState(null);
-  const [cardsPlayed, setCardsPlayed] = useState(0);
-  const [gameOver, setGameOver] = useState(false);
-  const [gameWon, setGameWon] = useState(false);
-  const [showRules, setShowRules] = useState(false);
-  const [mustPlayCount, setMustPlayCount] = useState(2);
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(to bottom right, #0f172a, #1e293b);
+            min-height: 100vh;
+            color: #fff;
+            padding: 1rem;
+        }
 
-  useEffect(() => {
-    initGame();
-  }, []);
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
 
-  const initGame = () => {
-    // Create deck with cards 2-99 (98 cards total, excluding 1 and 100)
-    const newDeck = [];
-    for (let i = 2; i <= 99; i++) {
-      newDeck.push(i);
-    }
-    // Shuffle deck
-    for (let i = newDeck.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]];
-    }
-    
-    // Draw initial hand of 8 cards
-    const initialHand = newDeck.splice(0, 8);
-    
-    setDeck(newDeck);
-    setHand(initialHand.sort((a, b) => a - b));
-    setPiles({
-      asc1: [1],
-      asc2: [1],
-      desc1: [100],
-      desc2: [100]
-    });
-    setSelectedCard(null);
-    setCardsPlayed(0);
-    setGameOver(false);
-    setGameWon(false);
-    setMustPlayCount(2);
-  };
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
 
-  const canPlayCard = (card, pile) => {
-    const topCard = pile[pile.length - 1];
-    const pileType = Object.keys(piles).find(key => piles[key] === pile);
-    
-    if (pileType.startsWith('asc')) {
-      // Ascending: card must be higher OR exactly 10 lower (backward trick)
-      return card > topCard || card === topCard - 10;
-    } else {
-      // Descending: card must be lower OR exactly 10 higher (backward trick)
-      return card < topCard || card === topCard + 10;
-    }
-  };
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
 
-  const hasValidMove = () => {
-    return hand.some(card => 
-      Object.values(piles).some(pile => canPlayCard(card, pile))
-    );
-  };
+        .header p {
+            color: #d1d5db;
+            margin-bottom: 1rem;
+        }
 
-  const playCard = (pileKey) => {
-    if (!selectedCard) return;
-    
-    const pile = piles[pileKey];
-    if (!canPlayCard(selectedCard, pile)) return;
+        .stats {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
 
-    // Play the card
-    const newPiles = { ...piles };
-    newPiles[pileKey] = [...pile, selectedCard];
-    setPiles(newPiles);
+        .stat-box {
+            background: #1e293b;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+        }
 
-    // Remove from hand
-    const newHand = hand.filter(c => c !== selectedCard);
-    setSelectedCard(null);
-    
-    const newCardsPlayed = cardsPlayed + 1;
-    setCardsPlayed(newCardsPlayed);
-    
-    // Check if must play more cards
-    const newMustPlayCount = mustPlayCount - 1;
-    setMustPlayCount(newMustPlayCount);
+        .stat-label {
+            color: #9ca3af;
+        }
 
-    // If finished playing required cards, draw new cards
-    if (newMustPlayCount === 0) {
-      const cardsToDraw = Math.min(2, deck.length);
-      const newDeck = [...deck];
-      const drawnCards = newDeck.splice(0, cardsToDraw);
-      const finalHand = [...newHand, ...drawnCards].sort((a, b) => a - b);
-      
-      setDeck(newDeck);
-      setHand(finalHand);
-      
-      // Check win condition
-      if (finalHand.length === 0 && newDeck.length === 0) {
-        setGameWon(true);
-        setGameOver(true);
-      } else if (finalHand.length > 0 && !finalHand.some(card => 
-        Object.values(newPiles).some(p => canPlayCard(card, p))
-      )) {
-        // No valid moves left
-        setGameOver(true);
-      } else {
-        // Set next turn requirement
-        setMustPlayCount(Math.min(2, finalHand.length));
-      }
-    } else {
-      setHand(newHand);
-      // Check if can continue
-      if (newHand.length === 0) {
-        // Draw cards immediately
-        const cardsToDraw = Math.min(newMustPlayCount, deck.length);
-        const newDeck = [...deck];
-        const drawnCards = newDeck.splice(0, cardsToDraw);
-        const finalHand = drawnCards.sort((a, b) => a - b);
-        setDeck(newDeck);
-        setHand(finalHand);
-        setMustPlayCount(0);
-      } else if (!hasValidMoveForHand(newHand, newPiles)) {
-        setGameOver(true);
-      }
-    }
-  };
+        .stat-value {
+            color: #fff;
+            font-weight: bold;
+        }
 
-  const hasValidMoveForHand = (currentHand, currentPiles) => {
-    return currentHand.some(card => 
-      Object.values(currentPiles).some(pile => canPlayCard(card, pile))
-    );
-  };
+        .btn {
+            background: #7c3aed;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background 0.2s;
+        }
 
-  const getPileColor = (pileKey) => {
-    if (!selectedCard) return 'bg-gray-700 border-gray-600';
-    if (canPlayCard(selectedCard, piles[pileKey])) {
-      return 'bg-green-700 border-green-500 ring-2 ring-green-400';
-    }
-    return 'bg-gray-700 border-gray-600 opacity-50';
-  };
+        .btn:hover {
+            background: #6d28d9;
+        }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-4">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-6">
-          <h1 className="text-4xl font-bold text-white mb-2">The Game</h1>
-          <p className="text-gray-300">Beat the deck by playing all 98 cards!</p>
-          <div className="flex gap-4 justify-center mt-4 text-sm">
-            <div className="bg-slate-800 px-4 py-2 rounded-lg">
-              <span className="text-gray-400">Cards Left: </span>
-              <span className="text-white font-bold">{deck.length + hand.length}</span>
+        .btn-info {
+            background: #2563eb;
+        }
+
+        .btn-info:hover {
+            background: #1d4ed8;
+        }
+
+        /* Rules */
+        .rules {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.875rem;
+            color: #d1d5db;
+            display: none;
+        }
+
+        .rules.show {
+            display: block;
+        }
+
+        .rules h3 {
+            color: #fff;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .rules ul {
+            list-style: disc;
+            margin-left: 1.5rem;
+        }
+
+        .rules li {
+            margin-bottom: 0.25rem;
+        }
+
+        /* Game Over Modal */
+        .game-over {
+            background: #7f1d1d;
+            border: 2px solid #dc2626;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            display: none;
+        }
+
+        .game-over.show {
+            display: block;
+        }
+
+        .game-over.won {
+            background: #14532d;
+            border-color: #16a34a;
+        }
+
+        .game-over h2 {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .game-over p {
+            color: #e5e7eb;
+            margin-bottom: 1rem;
+        }
+
+        .game-over .btn {
+            background: white;
+            color: #111827;
+            font-weight: bold;
+            margin: 0 auto;
+        }
+
+        .game-over .btn:hover {
+            background: #e5e7eb;
+        }
+
+        /* Playing Area - Diamond Layout */
+        .playing-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .pile-row {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+        }
+
+        .pile {
+            width: 128px;
+            height: 176px;
+            background: #374151;
+            border: 2px solid #4b5563;
+            border-radius: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .pile:hover:not(:disabled) {
+            transform: scale(1.05);
+        }
+
+        .pile:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pile.valid {
+            background: #166534;
+            border-color: #22c55e;
+            box-shadow: 0 0 0 2px #4ade80;
+        }
+
+        .pile-arrow {
+            font-size: 0.875rem;
+            color: #d1d5db;
+            margin-bottom: 0.25rem;
+        }
+
+        .pile-value {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .pile-count {
+            color: #9ca3af;
+            font-size: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        /* Hand */
+        .hand-section {
+            text-align: center;
+        }
+
+        .hand-section h3 {
+            font-weight: bold;
+            margin-bottom: 0.75rem;
+        }
+
+        .hand {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            justify-content: center;
+        }
+
+        .card {
+            width: 80px;
+            height: 112px;
+            background: white;
+            border: 2px solid #d1d5db;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #111827;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .card:hover {
+            transform: scale(1.05);
+        }
+
+        .card.selected {
+            background: #fbbf24;
+            border-color: #fde047;
+            color: #111827;
+            transform: scale(1.1);
+        }
+
+        .card:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 768px) {
+            .pile {
+                width: 96px;
+                height: 132px;
+            }
+
+            .pile-value {
+                font-size: 2.5rem;
+            }
+
+            .card {
+                width: 64px;
+                height: 90px;
+                font-size: 1.5rem;
+            }
+
+            .pile-row {
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>The Game</h1>
+            <p>Beat the deck by playing all 98 cards!</p>
+            <div class="stats">
+                <div class="stat-box">
+                    <span class="stat-label">Cards Left: </span>
+                    <span class="stat-value" id="cardsLeft">98</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">Must Play: </span>
+                    <span class="stat-value" id="mustPlay">2</span>
+                </div>
+                <button class="btn btn-info" id="rulesBtn">
+                    <span>ℹ️</span> Rules
+                </button>
+                <button class="btn" id="newGameBtn">
+                    <span>🔄</span> New Game
+                </button>
             </div>
-            <div className="bg-slate-800 px-4 py-2 rounded-lg">
-              <span className="text-gray-400">Must Play: </span>
-              <span className="text-white font-bold">{mustPlayCount}</span>
-            </div>
-            <button
-              onClick={() => setShowRules(!showRules)}
-              className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg flex items-center gap-2"
-            >
-              <Info size={16} />
-              Rules
-            </button>
-            <button
-              onClick={initGame}
-              className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg flex items-center gap-2"
-            >
-              <RotateCcw size={16} />
-              New Game
-            </button>
-          </div>
         </div>
 
-        {/* Rules */}
-        {showRules && (
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 mb-6 text-gray-300 text-sm">
-            <h3 className="text-white font-bold mb-2">How to Play:</h3>
-            <ul className="list-disc list-inside space-y-1">
-              <li>Play cards on 4 piles: 2 ascending (↑) and 2 descending (↓)</li>
-              <li>You must play at least 2 cards per turn (or 1 if only 1 remains)</li>
-              <li>Ascending piles start at 1 and go up; Descending start at 100 and go down</li>
-              <li><strong>Backward Trick:</strong> Play a card exactly 10 away in reverse direction</li>
-              <li>Win by playing all 98 cards. Lose if you can't make a valid move</li>
+        <!-- Rules -->
+        <div class="rules" id="rules">
+            <h3>How to Play:</h3>
+            <ul>
+                <li>Play cards on 4 piles: 2 ascending (↑) and 2 descending (↓)</li>
+                <li>You must play at least 2 cards per turn (or 1 if only 1 remains)</li>
+                <li>Ascending piles start at 1 and go up; Descending start at 100 and go down</li>
+                <li><strong>Backward Trick:</strong> Play a card exactly 10 away in reverse direction</li>
+                <li>Win by playing all 98 cards. Lose if you can't make a valid move</li>
             </ul>
-          </div>
-        )}
-
-        {/* Game Over */}
-        {gameOver && (
-          <div className={`${gameWon ? 'bg-green-900' : 'bg-red-900'} border ${gameWon ? 'border-green-600' : 'border-red-600'} rounded-lg p-6 mb-6 text-center`}>
-            <h2 className="text-3xl font-bold text-white mb-2">
-              {gameWon ? '🎉 You Won!' : '💀 Game Over'}
-            </h2>
-            <p className="text-gray-200 mb-4">
-              {gameWon ? 'You beat the deck!' : `You played ${98 - deck.length - hand.length} cards out of 98`}
-            </p>
-            <button
-              onClick={initGame}
-              className="bg-white text-gray-900 px-6 py-2 rounded-lg font-bold hover:bg-gray-200"
-            >
-              Play Again
-            </button>
-          </div>
-        )}
-
-        {/* Playing Area - Diamond Layout */}
-        <div className="flex flex-col items-center gap-3 mb-6">
-          {/* Top: asc1 */}
-          <div className="flex justify-center">
-            <button
-              onClick={() => playCard('asc1')}
-              disabled={!selectedCard || !canPlayCard(selectedCard, piles['asc1']) || gameOver}
-              className={`w-24 h-32 ${getPileColor('asc1')} border-2 rounded-lg flex flex-col items-center justify-center transition-all shadow-lg`}
-            >
-              <div className="text-xs text-gray-300 mb-1">↑</div>
-              <div className="text-3xl font-bold text-white">
-                {piles['asc1'][piles['asc1'].length - 1]}
-              </div>
-              <div className="text-gray-400 text-xs mt-1">
-                {piles['asc1'].length - 1}
-              </div>
-            </button>
-          </div>
-
-          {/* Middle: desc1 and desc2 */}
-          <div className="flex justify-center gap-4">
-            <button
-              onClick={() => playCard('desc1')}
-              disabled={!selectedCard || !canPlayCard(selectedCard, piles['desc1']) || gameOver}
-              className={`w-24 h-32 ${getPileColor('desc1')} border-2 rounded-lg flex flex-col items-center justify-center transition-all shadow-lg`}
-            >
-              <div className="text-xs text-gray-300 mb-1">↓</div>
-              <div className="text-3xl font-bold text-white">
-                {piles['desc1'][piles['desc1'].length - 1]}
-              </div>
-              <div className="text-gray-400 text-xs mt-1">
-                {piles['desc1'].length - 1}
-              </div>
-            </button>
-            <button
-              onClick={() => playCard('desc2')}
-              disabled={!selectedCard || !canPlayCard(selectedCard, piles['desc2']) || gameOver}
-              className={`w-24 h-32 ${getPileColor('desc2')} border-2 rounded-lg flex flex-col items-center justify-center transition-all shadow-lg`}
-            >
-              <div className="text-xs text-gray-300 mb-1">↓</div>
-              <div className="text-3xl font-bold text-white">
-                {piles['desc2'][piles['desc2'].length - 1]}
-              </div>
-              <div className="text-gray-400 text-xs mt-1">
-                {piles['desc2'].length - 1}
-              </div>
-            </button>
-          </div>
-
-          {/* Bottom: asc2 */}
-          <div className="flex justify-center">
-            <button
-              onClick={() => playCard('asc2')}
-              disabled={!selectedCard || !canPlayCard(selectedCard, piles['asc2']) || gameOver}
-              className={`w-24 h-32 ${getPileColor('asc2')} border-2 rounded-lg flex flex-col items-center justify-center transition-all shadow-lg`}
-            >
-              <div className="text-xs text-gray-300 mb-1">↑</div>
-              <div className="text-3xl font-bold text-white">
-                {piles['asc2'][piles['asc2'].length - 1]}
-              </div>
-              <div className="text-gray-400 text-xs mt-1">
-                {piles['asc2'].length - 1}
-              </div>
-            </button>
-          </div>
         </div>
 
-        {/* Hand */}
-        <div>
-          <h3 className="text-white text-center font-bold mb-3">Your Hand</h3>
-          <div className="flex flex-wrap gap-3 justify-center">
-            {hand.map((card, idx) => (
-              <button
-                key={idx}
-                onClick={() => setSelectedCard(card)}
-                disabled={gameOver}
-                className={`w-20 h-28 rounded-lg border-2 flex items-center justify-center text-3xl font-bold transition-all
-                  ${selectedCard === card 
-                    ? 'bg-yellow-500 border-yellow-300 text-gray-900 scale-110' 
-                    : 'bg-white border-gray-300 text-gray-900 hover:scale-105'
-                  }
-                  ${gameOver ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-                `}
-              >
-                {card}
-              </button>
-            ))}
-          </div>
+        <!-- Game Over -->
+        <div class="game-over" id="gameOver">
+            <h2 id="gameOverTitle">💀 Game Over</h2>
+            <p id="gameOverMessage">You played 0 cards out of 98</p>
+            <button class="btn" onclick="initGame()">Play Again</button>
         </div>
-      </div>
+
+        <!-- Playing Area -->
+        <div class="playing-area">
+            <!-- Top: asc1 -->
+            <div class="pile-row">
+                <button class="pile" data-pile="asc1" onclick="playCard('asc1')">
+                    <div class="pile-arrow">↑</div>
+                    <div class="pile-value" id="pile-asc1">1</div>
+                    <div class="pile-count" id="count-asc1">0 cards</div>
+                </button>
+            </div>
+
+            <!-- Middle: desc1 and desc2 -->
+            <div class="pile-row">
+                <button class="pile" data-pile="desc1" onclick="playCard('desc1')">
+                    <div class="pile-arrow">↓</div>
+                    <div class="pile-value" id="pile-desc1">100</div>
+                    <div class="pile-count" id="count-desc1">0 cards</div>
+                </button>
+                <button class="pile" data-pile="desc2" onclick="playCard('desc2')">
+                    <div class="pile-arrow">↓</div>
+                    <div class="pile-value" id="pile-desc2">100</div>
+                    <div class="pile-count" id="count-desc2">0 cards</div>
+                </button>
+            </div>
+
+            <!-- Bottom: asc2 -->
+            <div class="pile-row">
+                <button class="pile" data-pile="asc2" onclick="playCard('asc2')">
+                    <div class="pile-arrow">↑</div>
+                    <div class="pile-value" id="pile-asc2">1</div>
+                    <div class="pile-count" id="count-asc2">0 cards</div>
+                </button>
+            </div>
+        </div>
+
+        <!-- Hand -->
+        <div class="hand-section">
+            <h3>Your Hand</h3>
+            <div class="hand" id="hand"></div>
+        </div>
     </div>
-  );
-};
 
-export default TheGame;
+    <script>
+        let deck = [];
+        let hand = [];
+        let piles = {
+            asc1: [1],
+            asc2: [1],
+            desc1: [100],
+            desc2: [100]
+        };
+        let selectedCard = null;
+        let mustPlayCount = 2;
+        let gameOver = false;
+
+        function initGame() {
+            // Create deck 2-99 (98 cards)
+            deck = [];
+            for (let i = 2; i <= 99; i++) {
+                deck.push(i);
+            }
+            
+            // Shuffle
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+
+            // Deal 8 cards
+            hand = deck.splice(0, 8).sort((a, b) => a - b);
+            
+            piles = {
+                asc1: [1],
+                asc2: [1],
+                desc1: [100],
+                desc2: [100]
+            };
+            
+            selectedCard = null;
+            mustPlayCount = 2;
+            gameOver = false;
+
+            document.getElementById('gameOver').classList.remove('show');
+            updateUI();
+        }
+
+        function canPlayCard(card, pileKey) {
+            const pile = piles[pileKey];
+            const topCard = pile[pile.length - 1];
+            
+            if (pileKey.startsWith('asc')) {
+                return card > topCard || card === topCard - 10;
+            } else {
+                return card < topCard || card === topCard + 10;
+            }
+        }
+
+        function playCard(pileKey) {
+            if (!selectedCard || gameOver) return;
+            if (!canPlayCard(selectedCard, pileKey)) return;
+
+            // Play card
+            piles[pileKey].push(selectedCard);
+            hand = hand.filter(c => c !== selectedCard);
+            mustPlayCount--;
+
+            const cardWasSelected = selectedCard;
+            selectedCard = null;
+
+            // Check if need to draw
+            if (mustPlayCount === 0) {
+                const cardsToDraw = Math.min(2, deck.length);
+                const drawn = deck.splice(0, cardsToDraw);
+                hand = [...hand, ...drawn].sort((a, b) => a - b);
+                
+                // Check win
+                if (hand.length === 0 && deck.length === 0) {
+                    showGameOver(true);
+                    return;
+                }
+                
+                // Check lose
+                if (hand.length > 0 && !hasValidMove()) {
+                    showGameOver(false);
+                    return;
+                }
+                
+                mustPlayCount = Math.min(2, hand.length);
+            } else if (hand.length === 0 && mustPlayCount > 0) {
+                // Draw immediately if hand is empty
+                const cardsToDraw = Math.min(mustPlayCount, deck.length);
+                const drawn = deck.splice(0, cardsToDraw);
+                hand = drawn.sort((a, b) => a - b);
+                mustPlayCount = 0;
+            } else if (!hasValidMove()) {
+                showGameOver(false);
+                return;
+            }
+
+            updateUI();
+        }
+
+        function hasValidMove() {
+            return hand.some(card => 
+                Object.keys(piles).some(pileKey => canPlayCard(card, pileKey))
+            );
+        }
+
+        function showGameOver(won) {
+            gameOver = true;
+            const gameOverEl = document.getElementById('gameOver');
+            const titleEl = document.getElementById('gameOverTitle');
+            const messageEl = document.getElementById('gameOverMessage');
+            
+            if (won) {
+                gameOverEl.classList.add('won');
+                titleEl.textContent = '🎉 You Won!';
+                messageEl.textContent = 'You beat the deck!';
+            } else {
+                gameOverEl.classList.remove('won');
+                titleEl.textContent = '💀 Game Over';
+                const played = 98 - deck.length - hand.length;
+                messageEl.textContent = `You played ${played} cards out of 98`;
+            }
+            
+            gameOverEl.classList.add('show');
+        }
+
+        function updateUI() {
+            // Update stats
+            document.getElementById('cardsLeft').textContent = deck.length + hand.length;
+            document.getElementById('mustPlay').textContent = mustPlayCount;
+
+            // Update piles
+            Object.keys(piles).forEach(pileKey => {
+                const pile = piles[pileKey];
+                const topCard = pile[pile.length - 1];
+                const pileEl = document.querySelector(`[data-pile="${pileKey}"]`);
+                
+                document.getElementById(`pile-${pileKey}`).textContent = topCard;
+                document.getElementById(`count-${pileKey}`).textContent = `${pile.length - 1} cards`;
+                
+                // Update valid state
+                pileEl.classList.remove('valid');
+                pileEl.disabled = gameOver;
+                
+                if (selectedCard && canPlayCard(selectedCard, pileKey)) {
+                    pileEl.classList.add('valid');
+                }
+            });
+
+            // Update hand
+            const handEl = document.getElementById('hand');
+            handEl.innerHTML = '';
+            hand.forEach(card => {
+                const cardEl = document.createElement('button');
+                cardEl.className = 'card';
+                if (card === selectedCard) cardEl.classList.add('selected');
+                cardEl.textContent = card;
+                cardEl.disabled = gameOver;
+                cardEl.onclick = () => {
+                    selectedCard = card;
+                    updateUI();
+                };
+                handEl.appendChild(cardEl);
+            });
+        }
+
+        // Event listeners
+        document.getElementById('rulesBtn').addEventListener('click', () => {
+            document.getElementById('rules').classList.toggle('show');
+        });
+
+        document.getElementById('newGameBtn').addEventListener('click', initGame);
+
+        // Register service worker (only works when deployed)
+        if ('serviceWorker' in navigator && window.location.hostname !== 'www.claudeusercontent.com') {
+            navigator.serviceWorker.register('sw.js')
+                .then(() => console.log('Service Worker registered'))
+                .catch(err => console.log('Service Worker registration failed:', err));
+        }
+
+        // Start game
+        initGame();
+    </script>
+</body>
+</html>
